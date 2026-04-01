@@ -1,0 +1,22 @@
+{
+    "name": "nece001/php-hound-cloud-storage-tencent-cos",
+    "description": "php 云存储，腾讯云COS",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Nece\\Hound\\Cloud\\Storage\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "nece001",
+            "email": "nece001@163.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.2",
+        "qcloud/cos-sdk-v5": "^2.6",
+        "nece001/php-hound-cloud-storage":"^1.0"
+    }
+}
