@@ -18,11 +18,11 @@ class TencentCos extends ObjectStorage implements IStorage
     private $base_uri;
     private $object_meta_data = array();
 
-    public function __construct($secret_id, $secret_key, $bucket, $region, $base_uri = '', $schema = 'https', $token = null, $timeout = 10, $connect_timeout = 3, $proxy = null)
+    public function __construct($secret_id, $secret_key, $bucket, $region, $base_uri = '', $token = null, $timeout = 10, $connect_timeout = 3, $proxy = null)
     {
         $config = [
+            'schema' => 'https',
             'region' => $region,
-            'schema' => $schema,
             'timeout' => $timeout,
             'connect_timeout' => $connect_timeout,
             'proxy' => $proxy,
@@ -228,17 +228,20 @@ class TencentCos extends ObjectStorage implements IStorage
     /**
      * @inheritDoc
      */
-    public function scandir(string $path, int $order = Consts::SCANDIR_SORT_ASCENDING): array
+    public function list(string $path, int $order = Consts::SCANDIR_SORT_ASCENDING, string $next_marker='', $max_keys=1000): array
     {
         $prefix = $this->dirPath($path);
 
         $args = array(
             'Bucket' => $this->bucket,
             'Prefix' => '/' == $prefix ? '' : $prefix,
-            'Delimiter' => '/'
+            'Delimiter' => '/',
+            'Marker' => $next_marker,
+            'MaxKeys' => $max_keys,
         );
         
         $result = $this->client->listObjects($args);
+
         $list = array();
         // 列出目录
         if (isset($result['CommonPrefixes']) && $result['CommonPrefixes']) {
@@ -249,7 +252,8 @@ class TencentCos extends ObjectStorage implements IStorage
                 }
 
                 if ($folder) {
-                    $list[] = trim($folder, '/');
+                    $name = trim($folder, '/');
+                    $list[] = $this->buildObjectListItem($name, 0, true, 0, 0, 0);
                 }
             }
         }
@@ -258,12 +262,19 @@ class TencentCos extends ObjectStorage implements IStorage
         if (isset($result['Contents'])) {
             foreach ($result['Contents'] as $row) {
                 $file = $row['Key'];
+                $name = $file;
                 if ($prefix && 0 === strpos($file, $prefix)) {
-                    $file = substr($file, strlen($prefix));
+                    $name = substr($file, strlen($prefix));
                 }
 
-                if ($file) {
-                    $list[] = $file;
+                if ($name) {
+                    $size = $row['Size'];
+                    $mtime = strtotime($row['LastModified']);
+                    $atime = $mtime;
+                    $ctime = $mtime;
+                    $is_dir = false;
+
+                    $list[] = $this->buildObjectListItem($name, $size, $is_dir, $atime, $ctime, $mtime);
                 }
             }
         }
